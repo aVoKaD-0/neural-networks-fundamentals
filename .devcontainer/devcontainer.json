@@ -37,10 +37,10 @@
   "containerEnv": {
     "CUDA_VISIBLE_DEVICES": "",
     "NVIDIA_VISIBLE_DEVICES": "none",
-    "SSH_AUTH_SOCK": "/run/host-services/ssh-auth.sock"
+    /*
+    */
   },
   "mounts": [
-    "source=/run/host-services/ssh-auth.sock,target=/run/host-services/ssh-auth.sock,type=bind",
     /*
     */
   ]
