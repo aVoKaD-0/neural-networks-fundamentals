@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/otloo/OneDrive/%D0%A0%D0%B0%D0%B1%D0%BE%D1%87%D0%B8%D0%B9%20%D1%81%D1%82%D0%BE%D0%BB/neural%20network/course/.laborantum/mlflow_logs/238485478522587542/f523fc46f5314181830229c7cbc5f554/artifacts
+end_time: 1783950407294
+entry_point_name: ''
+experiment_id: '238485478522587542'
+lifecycle_stage: active
+run_id: f523fc46f5314181830229c7cbc5f554
+run_name: simple_network_training
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1783950352936
+status: 3
+tags: []
+user_id: otloo

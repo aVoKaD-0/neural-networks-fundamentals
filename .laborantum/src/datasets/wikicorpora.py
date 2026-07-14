@@ -1,8 +1,6 @@
 from collections import Counter
 import re
-
 import torch
-
 
 class SkipGramDataset:
     def __init__(self, corpus, window_size=2, min_count=1):
@@ -15,7 +13,20 @@ class SkipGramDataset:
         self.word_counts = {'word': 1}
         self.pairs = [(0, 0)]
 
-        ## YOUR CODE HERE
+        self.tokens = self._tokenize(corpus)
+        token_counts = Counter(self.tokens)
+
+        self.vocab = sorted(
+            [word for word, count in token_counts.items() if count >= self.min_count],
+            key=lambda w: (-token_counts[w], w)
+        )
+        
+        self.word_to_index = {word: i for i, word in enumerate(self.vocab)}
+        self.index_to_word = {i: word for word, i in self.word_to_index.items()}
+        self.word_counts = {word: token_counts[word] for word in self.vocab}
+        
+        indexed_tokens = [self.word_to_index[t] for t in self.tokens if t in self.word_to_index]
+        self.pairs = self._make_pairs(indexed_tokens, self.window_size)
 
     def _tokenize(self, corpus):
         text = ' '.join(corpus) if isinstance(corpus, (list, tuple)) else str(corpus)
@@ -26,13 +37,13 @@ class SkipGramDataset:
 
     def _normalize_token(self, token):
         token = token.lower()
-        if len(token) > 5 and token.endswith('ing'):
+        if len(token) >= 5 and token.endswith('ing'):
             return token[:-3]
-        if len(token) > 4 and token.endswith('ed'):
+        if len(token) >= 4 and token.endswith('ed'):
             return token[:-2]
-        if len(token) > 4 and token.endswith('es') and not token.endswith('ses'):
+        if len(token) >= 4 and token.endswith('es') and not token.endswith('ses'):
             return token[:-2]
-        if len(token) > 3 and token.endswith('s') and not token.endswith('ss'):
+        if len(token) >= 3 and token.endswith('s') and not token.endswith('ss'):
             return token[:-1]
         return token
 

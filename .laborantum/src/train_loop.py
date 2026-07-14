@@ -1,14 +1,10 @@
 from html import escape
-
 import torch
 from tqdm.auto import tqdm
-
 from .utils import mlflow as mlflow_utils
-
 
 def _value_text(value):
     return '-' if value is None else f'{value:8.4f}'
-
 
 def _number(value):
     if hasattr(value, 'detach'):
@@ -17,18 +13,15 @@ def _number(value):
         return value.item()
     return value
 
-
 def _normalize_named_functions(functions, default_name):
     if isinstance(functions, dict):
         return functions
     return {default_name: functions}
 
-
 def _loss_metric_name(stage, loss_name):
     if loss_name == 'loss':
         return f'{stage}_loss'
     return f'{stage}_loss/{loss_name}'
-
 
 def _batch_status(batch_losses, batch_loss_emas):
     lines = ['batch losses:']
@@ -41,7 +34,6 @@ def _batch_status(batch_losses, batch_loss_emas):
                 f'{loss_name}:\t train {_value_text(loss_value)} | ema {_value_text(loss_ema)}'
             )
     return '\n'.join(lines)
-
 
 def _set_bar_message(bar, message):
     children = getattr(getattr(bar, 'container', None), 'children', ())
@@ -67,7 +59,6 @@ def _set_bar_message(bar, message):
     else:
         bar.set_postfix_str(message.replace('\n', ' | '))
 
-
 def _keep_bar_message_on_close(bar, get_message):
     original_close = bar.close
 
@@ -78,7 +69,6 @@ def _keep_bar_message_on_close(bar, get_message):
             _set_bar_message(bar, message)
 
     bar.close = close_with_message
-
 
 def _epoch_status(valid_losses, train_losses, valid_metrics=None, train_metrics=None):
     lines = [f'epoch loss:']
@@ -119,13 +109,11 @@ def _epoch_status(valid_losses, train_losses, valid_metrics=None, train_metrics=
 
     return '\n'.join(lines)
 
-
 def _empty_metric_totals(metrics):
     return {
         metric_name: {'enumerator': 0.0, 'denominator': 1.0e-8}
         for metric_name in metrics
     }
-
 
 def _empty_loss_totals(losses):
     return {
@@ -133,26 +121,25 @@ def _empty_loss_totals(losses):
         for loss_name in losses
     }
 
-
 def _compute_losses(losses, batch):
     return {
-        ## YOUR CODE HERE
+        loss_name: loss_fn(batch)
+        for loss_name, loss_fn in losses.items()
     }
-
 
 def _sum_losses(batch_losses):
     total_loss = None
     for loss_value in batch_losses.values():
-        ...
-        ## YOUR CODE HERE
+        if total_loss is None:
+            total_loss = loss_value
+        else:
+            total_loss = total_loss + loss_value
     return total_loss
-
 
 def _update_loss_totals(loss_totals, batch_losses):
     for loss_name, loss_value in batch_losses.items():
         loss_totals[loss_name]['enumerator'] += _number(loss_value)
         loss_totals[loss_name]['denominator'] += 1.0
-
 
 def _update_loss_emas(loss_emas, batch_losses, beta=0.90):
     for loss_name, loss_value in batch_losses.items():
@@ -162,28 +149,23 @@ def _update_loss_emas(loss_emas, batch_losses, beta=0.90):
         else:
             loss_emas[loss_name] = beta * loss_emas[loss_name] + (1 - beta) * loss_number
 
-
 def _finalize_loss_totals(loss_totals):
     return {
         loss_name: totals['enumerator'] / totals['denominator']
         for loss_name, totals in loss_totals.items()
     }
 
-
 def _update_metric_totals(metric_totals, metrics, batch):
-    
-    
     for metric_name, metric_fn in metrics.items():
-        ...
-        ## YOUR CODE HERE
-
+        enumerator, denominator = metric_fn(batch)
+        metric_totals[metric_name]['enumerator'] += _number(enumerator)
+        metric_totals[metric_name]['denominator'] += _number(denominator)
 
 def _finalize_metric_totals(metric_totals):
     return {
         metric_name: _number(totals['enumerator'] / totals['denominator'])
         for metric_name, totals in metric_totals.items()
     }
-
 
 def train_model(
     model,
@@ -248,17 +230,15 @@ def train_model(
                 for batch_index, batch in enumerate(train_dl):
                     batch = {'data': batch}
 
-                    ## YOUR CODE HERE
-                    # Implement one training step:
-                    # switch to training mode
-                    # reset gradients
-                    # run the model
-                    # compute named losses
-                    # store named losses and their sum
-                    # backpropagate through the summed loss
-                    # update weights,
-                    # switch the model to evaluation mode
-                    # update metric numerators/denominators.
+                    model.train()
+                    optimizer.zero_grad()
+                    model(batch)
+                    loss_values = _compute_losses(losses, batch)
+                    total_loss = _sum_losses(loss_values)
+                    total_loss.backward()
+                    optimizer.step()
+                    model.eval()
+                    _update_metric_totals(train_metrics, metrics, batch)
 
                     _update_loss_totals(train_losses, loss_values)
                     _update_loss_emas(loss_emas, loss_values)
@@ -281,13 +261,10 @@ def train_model(
                     for valid_batch in valid_dl:
                         valid_batch = {'data': valid_batch}
 
-                        ## YOUR CODE HERE
-                        # Implement one validation step:
-                        # switch the model to evaluation mode
-                        # run the model without gradients
-                        # compute and store named validation losses
-                        # and update metric numerators/denominators. 
-                        # Do not call backward() or step().
+                        model.eval()
+                        model(valid_batch)
+                        valid_loss_values = _compute_losses(losses, valid_batch)
+                        _update_metric_totals(valid_metrics, metrics, valid_batch)
 
                         _update_loss_totals(valid_losses, valid_loss_values)
 
